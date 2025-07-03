@@ -8,7 +8,7 @@ type Sprite = Component<{
     tile?: number
     scale?: number
     resizeTo?: RefObject<HTMLElement>
-    use_shader?: string
+    use_modifier?: string
     paused?: boolean
     place_in_background?: boolean
 
@@ -38,7 +38,7 @@ type SpritesheetFunction = (
         loading: "load" | "preload" | "background" | "lazy"
     }>
 ) => [Sprite, {
-    shader: (id: string, callback: (ctx: OffscreenCanvasRenderingContext2D, width: number, height: number) => void) => void
+    modifier: (id: string, callback: (ctx: OffscreenCanvasRenderingContext2D, width: number, height: number) => void) => void
 }]
 
 
@@ -64,7 +64,7 @@ if (document.querySelector("[data-sprite-animation]") === null) {
 
 
 export const spritesheet: SpritesheetFunction = (src, options = {}) => {
-    const shaders = new Map<string, string>()
+    const modifiers = new Map<string, string>()
     const rerenders = new Map<string, number>()
 
 
@@ -84,7 +84,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
         image.decode().catch(() => { })  //? decode without blocking
     }
 
-    const shader = (id: string, callback: CallableFunction) => {
+    const modifier = (id: string, callback: CallableFunction) => {
         const render = async () => {
             const canvas: HTMLCanvasElement | OffscreenCanvas = typeof OffscreenCanvas !== "undefined" ?
                 new OffscreenCanvas(image.naturalWidth, image.naturalHeight) :
@@ -103,7 +103,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
             await callback(ctx, image.naturalWidth, image.naturalHeight)
 
             const finalize = (url: string) => {
-                shaders.set(id, url)
+                modifiers.set(id, url)
                 rerenders.set(id, Date.now())
             }
 
@@ -128,7 +128,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
         scale = 1,
         tile = 1,
         resizeTo,
-        use_shader = "",
+        use_modifier = "",
         paused = false,
         place_in_background = false,
 
@@ -141,7 +141,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
         const [resize_scale, setResizeScale] = useState(1)
         const imgRef = useRef<HTMLImageElement | HTMLDivElement>(null)
         const [isInView, setIsInView] = useState(opts.loading !== "lazy")
-        const imageSrc = use_shader !== "" ? shaders.get(use_shader) : image.src
+        const imageSrc = use_modifier !== "" ? modifiers.get(use_modifier) : image.src
 
         //* Lazy Loading Control
         useEffect(() => {
@@ -185,17 +185,17 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
             if (paused) return;
 
             const id = setInterval(() => {
-                const modTime = rerenders.get(use_shader)
+                const modTime = rerenders.get(use_modifier)
                 if (modTime) {
                     setTick(modTime)
                     setTimeout(() => {
-                        rerenders.delete(use_shader)
+                        rerenders.delete(use_modifier)
                     }, 100)
                 }
             }, 100)
 
             return () => clearInterval(id)
-        }, [use_shader])
+        }, [use_modifier])
 
 
         const stateConfig = opts.structure[state]
@@ -269,6 +269,6 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
     })
 
     return [Sprite, {
-        shader
+        modifier
     }]
 }

@@ -6,7 +6,7 @@ import { memo, useRef, useState } from "react"
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@ui/resizable"
 import { BackToDemoMenu } from "@/components/Game/BackToDemo"
 
-const [Sprite, { shader }] = spritesheet(test_sheet, {
+const [Sprite, { modifier }] = spritesheet(test_sheet, {
     tile_size: [32, 32],
     frame_time: .25,
     structure: {
@@ -122,7 +122,7 @@ export const ResizeAnimated = () => {
 }
 
 setTimeout(() => {
-    shader("test", (ctx, width, height) => {
+    modifier("test", (ctx, width, height) => {
         const imageData = ctx.getImageData(0, 0, width, height)
         const data = imageData.data
 
@@ -145,10 +145,10 @@ setTimeout(() => {
 export const ShaderExample = () => {
     return <div className="flex gap-10 items-center">
         <p className="text-m font-bold">Shader: </p>
-        <Sprite state="main" use_shader="test" scale={3}>
+        <Sprite state="main" use_modifier="test" scale={3}>
             <div className="w-full h-full flex justify-center items-center"><p>Spinner</p></div>
         </Sprite>
-        <Sprite state="main" use_shader="test" scale={3}>
+        <Sprite state="main" use_modifier="test" scale={3}>
             <div className="w-full h-full flex justify-center items-center"><p>Spinner</p></div>
         </Sprite>
     </div>
