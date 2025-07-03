@@ -1,4 +1,4 @@
-import { CSSProperties, ImgHTMLAttributes, memo, RefObject, useEffect, useRef, useState } from "react"
+import { CSSProperties, HTMLAttributes, memo, RefObject, useEffect, useRef, useState } from "react"
 import { Component } from "./types/component"
 import { OptionObjectDefaults, OptionObjectDefinition } from "./types/object"
 
@@ -10,10 +10,11 @@ type Sprite = Component<{
     resizeTo?: RefObject<HTMLElement>
     use_shader?: string
     paused?: boolean
+    place_in_background?: boolean
 
     style?: CSSProperties
     animation?: string
-} & ImgHTMLAttributes<HTMLImageElement>>
+} & (HTMLAttributes<HTMLImageElement> | HTMLAttributes<HTMLDivElement>)>
 
 type SpritesheetFunction = (
     src: string,
@@ -49,6 +50,11 @@ if (document.querySelector("[data-sprite-animation]") === null) {
             0% { object-position: var(--sprite-last-frame) var(--sprite-layer); }
             100% { object-position: 0px var(--sprite-layer); }
         }
+
+        @keyframes spriteBackgroundAnimation {
+            0% { background-position: var(--sprite-last-frame) var(--sprite-layer); }
+            100% { background-position: 0px var(--sprite-layer); }
+        }
     `
 
     style.setAttribute("data-sprite-animation", "")
@@ -57,57 +63,6 @@ if (document.querySelector("[data-sprite-animation]") === null) {
 
 
 
-
-/**
- * Creates an interactive Sprite React component and a shader registration utility
- * to display animated or static spritesheets with rich visual effects.
- *
- * This factory function allows you to render sprite-based UI elements,
- * handle dynamic animations, apply custom shaders, and respond to user interactions.
- *
- * @function
- * @param {string} src - Source URL of the spritesheet image.
- * @param {Object} options - Configuration object.
- * @param {[number, number]} options.tile_size - Dimensions [height, width] of a single sprite tile.
- * @param {number} options.frame_time - Duration (in seconds) of each animation frame.
- * @param {Object} options.structure - Defines sprite states (animated or static) and frame layouts.
- * @param {'load'|'preload'|'background'} options.loading - Image loading behavior.
- * 
- * @returns {[React.MemoExoticComponent, { shader: Function }]} A tuple containing:
- *  - Sprite: A React component that renders the sprite and supports props like `state`, `rate`, `scale`,
- *    `use_shader`, `animation`, event handlers, and native <img> attributes.
- *  - shader: A utility function to register canvas-based shader effects that can be dynamically applied
- *    to sprite instances.
- *
- * @example
- * const [Sprite, { shader }] = spritesheet('/spritesheet.png', {
- *   tile_size: [64, 64],
- *   frame_time: 0.1,
- *   structure: {
- *     main: { type: 'animated', layer: 0, length: 6 },
- *     idle: { type: 'tile', layer: 1, length: 1 },
- *   },
- *   loading: 'load',
- * })
- *
- * // Register a glowing shader effect
- * shader('glow', (ctx, width, height) => {
- *   ctx.globalCompositeOperation = 'lighter'
- *   ctx.fillStyle = 'rgba(255, 255, 0, 0.5)'
- *   ctx.fillRect(0, 0, width, height)
- * })
- *
- * // Use the Sprite component in your React tree
- * <Sprite
- *   state="main"
- *   rate={1.5}
- *   scale={2}
- *   use_shader="glow"
- *   animation="bounce 2s ease-in-out infinite"
- *   alt="Character"
- *   onClick={() => alert('Sprite clicked!')}
- * />
- */
 export const spritesheet: SpritesheetFunction = (src, options = {}) => {
     const shaders = new Map<string, string>()
     const rerenders = new Map<string, number>()
@@ -175,15 +130,16 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
         resizeTo,
         use_shader = "",
         paused = false,
+        place_in_background = false,
 
         style = {},
         animation,
         children,
 
-        ...imgProps
+        ...props
     }) => {
         const [resize_scale, setResizeScale] = useState(1)
-        const imgRef = useRef<HTMLImageElement>(null)
+        const imgRef = useRef<HTMLImageElement | HTMLDivElement>(null)
         const [isInView, setIsInView] = useState(opts.loading !== "lazy")
         const imageSrc = use_shader !== "" ? shaders.get(use_shader) : image.src
 
@@ -214,11 +170,11 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
                 )
             })
 
-            if (resizeTo.current) 
+            if (resizeTo.current)
                 observer.observe(resizeTo.current);
 
             return () => {
-                if (resizeTo.current) 
+                if (resizeTo.current)
                     observer.unobserve(resizeTo.current);
             }
         }, [])
@@ -247,6 +203,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
         const height = opts.tile_size[0] * computedScale
         const width = opts.tile_size[1] * computedScale
         const layer = stateConfig.layer * computedScale * opts.tile_size[0]
+        const offset = `-${opts.tile_size[1] * computedScale * (tile - 1)}px ${layer}px`
 
         if (imageSrc === undefined && isInView)
             return <div style={{ width: width, height: height }}>{children}</div>;
@@ -259,31 +216,56 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
             "--sprite-layer": `${layer}px`,
         } as React.CSSProperties
 
-        if (stateConfig.type === "animated")
+        if (stateConfig.type === "animated") {
+            const animationName = place_in_background ? "spriteBackgroundAnimation" : "spriteAnimation"
             Object.assign(sprite_style, {
                 "--sprite-last-frame": `-${opts.tile_size[1] * computedScale * stateConfig.length}px`,
                 "--frames": stateConfig.length,
                 "--duration": `${opts.frame_time * stateConfig.length * (1 / rate)}s`,
-                animation: `spriteAnimation var(--duration) steps(var(--frames), start) infinite${animation ? `, ${animation}` : ""}`
-            })
+                animation: `${animationName} var(--duration) steps(var(--frames), start) infinite${animation ? `, ${animation}` : ""}`
+            });
+        }
         else
-            Object.assign(sprite_style, {
-                objectPosition: `-${opts.tile_size[1] * computedScale * (tile - 1)}px ${layer}px`
-            })
+            Object.assign(
+                sprite_style,
+                place_in_background ?
+                    {
+                        backgroundPosition: offset
+                    } :
+                    {
+                        objectPosition: offset
+                    }
+            );
 
 
         Object.assign(style, sprite_style)
 
-        return (
-            <img
-                {...imgProps}
-                src={isInView ? imageSrc : undefined}
-                width={width}
-                height={height}
-                ref={imgRef}
-                style={style}
-            />
-        )
+        if (place_in_background) {
+            return (
+                <div
+                    {...props}
+                    ref={imgRef as RefObject<HTMLDivElement>}
+                    style={{
+                        ...style,
+                        backgroundImage: isInView ? `url(${imageSrc})` : undefined,
+                        backgroundSize: `${opts.tile_size[1] * computedScale * (stateConfig.length ?? 1)}px auto`,
+                    }}
+                >
+                    {children}
+                </div>
+            )
+        } else {
+            return (
+                <img
+                    {...props}
+                    src={isInView ? imageSrc : undefined}
+                    width={width}
+                    height={height}
+                    ref={imgRef as RefObject<HTMLImageElement>}
+                    style={style}
+                />
+            )
+        }
     })
 
     return [Sprite, {

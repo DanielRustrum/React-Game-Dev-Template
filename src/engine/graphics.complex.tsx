@@ -18,7 +18,6 @@ type RegionFunction = (
 
 
 export const region: RegionFunction = (name, assets=[]) => {
-
     return ({style, className, alt_text, key, regionMethod}) => {
         const containerRef = useRef<null | HTMLDivElement>(null)
 

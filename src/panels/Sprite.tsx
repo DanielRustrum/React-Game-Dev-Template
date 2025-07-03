@@ -171,9 +171,13 @@ export const AnimationExample = () => {
     </div>
 }
 
-export const Panel = () => <>
+export const Panel = () => <div className="m-10">
+    <BackToDemoMenu />
     <p className="text-xl font-bold text-center">Animation</p>
     <Sprite state="main" />
+    <Sprite state="main" place_in_background scale={4}>
+        <div className="text-center flex flex-col justify-center h-full text-white bg-black opacity-50 rounded-3xl">Background Animation</div>
+    </Sprite>
     <RateAnimated />
     <ScaleAnimated />
     <p className="text-xl font-bold text-center">Static</p>
@@ -183,7 +187,6 @@ export const Panel = () => <>
     <ResizeAnimated />
     <ShaderExample />
     <AnimationExample />
-    <BackToDemoMenu />
-</>
+</div>
 
 export const name = "sprite"

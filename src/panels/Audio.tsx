@@ -24,9 +24,6 @@ import { BackToDemoMenu } from "@/components/Game/BackToDemo";
 const click = soundEffect(shield_stop, { volume: 0.1 });
 
 const chartConfig = {
-    // views: {
-    //     label: "Volume",
-    // },
     volume: {
         label: "Volume",
         color: "var(--chart-1)",
@@ -234,7 +231,7 @@ const LinearEffectExample = () => {
                 }}
                 clickEvents={{
                     Volume: () => {
-                        const newVolume = click_volume >= 1? 0: 1.2;
+                        const newVolume = click_volume >= 0.5? 0: 1.2;
                         click({
                             volume: [click_volume, newVolume],
                             ease: x => x* x* x,
