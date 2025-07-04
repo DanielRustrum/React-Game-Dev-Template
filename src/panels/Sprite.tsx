@@ -22,7 +22,7 @@ export const RateAnimated = memo(() => {
 
     return <div className="flex gap-10">
         <p className="text-m font-bold">Change Animation Rate: </p>
-        <Sprite state="main" rate={rate} />
+        <Sprite state="main" rate={rate} scale={3}/>
         <Slider
             defaultValue={[1]}
             min={0}
@@ -30,7 +30,7 @@ export const RateAnimated = memo(() => {
             step={.1}
             className="w-50"
             onValueChange={value => {
-                if (value[0] !== rate) setRate(value[0]);
+                if(value[0] !== rate) setRate(value[0]);
             }}
         />
         <p>{rate}</p>
@@ -44,7 +44,7 @@ export const ScaleAnimated = memo(() => {
         <p className="text-m font-bold">Change Scale: </p>
         <Sprite state="main" scale={scale} />
         <Slider
-            defaultValue={[1]}
+            defaultValue={[3]}
             min={.5}
             max={5}
             step={.1}
@@ -143,14 +143,12 @@ setTimeout(() => {
 }, 2000)
 
 export const ShaderExample = () => {
+    const spinner = <div className="w-full h-full flex justify-center items-center"><p>Spinner</p></div>
+
     return <div className="flex gap-10 items-center">
         <p className="text-m font-bold">Shader: </p>
-        <Sprite state="main" use_modifier="test" scale={3}>
-            <div className="w-full h-full flex justify-center items-center"><p>Spinner</p></div>
-        </Sprite>
-        <Sprite state="main" use_modifier="test" scale={3}>
-            <div className="w-full h-full flex justify-center items-center"><p>Spinner</p></div>
-        </Sprite>
+        <Sprite state="main" use_modifier="test" scale={3} fallback={spinner} />
+        <Sprite state="main" use_modifier="test" scale={3} fallback={spinner} />
     </div>
 }
 
@@ -173,17 +171,21 @@ export const AnimationExample = () => {
 
 export const Panel = () => <div className="m-10">
     <BackToDemoMenu />
-    <p className="text-xl font-bold text-center">Animation</p>
-    <Sprite state="main" />
-    <Sprite state="main" place_in_background scale={4}>
-        <div className="text-center flex flex-col justify-center h-full text-white bg-black opacity-50 rounded-3xl">Background Animation</div>
-    </Sprite>
-    <RateAnimated />
-    <ScaleAnimated />
     <p className="text-xl font-bold text-center">Static</p>
     <Sprite state="tile" tile={2} />
     <ScaleStatic />
     <HueChangeStatic />
+
+    <p className="text-xl font-bold text-center">Animation</p>
+    <div className="flex gap-10">
+        <Sprite state="main" scale={4} />
+        <Sprite state="main" scale={4}>
+            <div className="text-center flex flex-col justify-center h-full text-white bg-black opacity-50 rounded-3xl">Background Animation</div>
+        </Sprite>
+    </div>
+    <RateAnimated />
+    <ScaleAnimated />
+    <p className="text-xl font-bold text-center">The More Complicated Stuff</p>
     <ResizeAnimated />
     <ShaderExample />
     <AnimationExample />

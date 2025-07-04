@@ -1,4 +1,4 @@
-import { CSSProperties, HTMLAttributes, memo, RefObject, useEffect, useRef, useState } from "react"
+import { CSSProperties, HTMLAttributes, memo, ReactNode, RefObject, useEffect, useRef, useState } from "react"
 import { Component } from "./types/component"
 import { OptionObjectDefaults, OptionObjectDefinition } from "./types/object"
 
@@ -10,7 +10,7 @@ type Sprite = Component<{
     resizeTo?: RefObject<HTMLElement>
     use_modifier?: string
     paused?: boolean
-    place_in_background?: boolean
+    fallback?: ReactNode
 
     style?: CSSProperties
     animation?: string
@@ -35,10 +35,11 @@ type SpritesheetFunction = (
                 length: number
             }
         }
-        loading: "load" | "preload" | "background" | "lazy"
+        loading: "load" | "preload" | "lazy" | "delayed"
     }>
 ) => [Sprite, {
     modifier: (id: string, callback: (ctx: OffscreenCanvasRenderingContext2D, width: number, height: number) => void) => void
+    load: () => Promise<true>
 }]
 
 
@@ -62,7 +63,6 @@ if (document.querySelector("[data-sprite-animation]") === null) {
 }
 
 
-
 export const spritesheet: SpritesheetFunction = (src, options = {}) => {
     const modifiers = new Map<string, string>()
     const rerenders = new Map<string, number>()
@@ -77,12 +77,46 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
     }
 
     const image = new Image()
-    image.crossOrigin = "anonymous"
-    image.src = src
 
-    if (opts.loading === "preload" && image.decode) {
-        image.decode().catch(() => { })  //? decode without blocking
+    if (opts.loading !== "delayed") {
+        image.crossOrigin = "anonymous"
+        image.src = src
+
+        if (opts.loading === "preload" && image.decode) {
+            image.decode().catch(() => { })
+        }
     }
+
+    const load: ReturnType<SpritesheetFunction>[1]["load"] = () => new Promise((resolve, reject) => {
+        const onLoad = () => {
+            cleanup()
+            resolve(true)
+        }
+
+        const onError = (_: unknown) => {
+            cleanup()
+            reject(new Error(`Failed to load image: ${image.src}`))
+        }
+
+        const cleanup = () => {
+            image.removeEventListener('load', onLoad)
+            image.removeEventListener('error', onError)
+        }
+
+        if (image.complete && image.naturalWidth !== 0) {
+            resolve(true)
+            return
+        }
+
+        if (opts.loading === "delayed") {
+            image.crossOrigin = "anonymous"
+            image.src = src
+        }
+
+        image.addEventListener('load', onLoad)
+        image.addEventListener('error', onError)
+
+    })
 
     const modifier = (id: string, callback: CallableFunction) => {
         const render = async () => {
@@ -130,7 +164,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
         resizeTo,
         use_modifier = "",
         paused = false,
-        place_in_background = false,
+        fallback = <></>,
 
         style = {},
         animation,
@@ -206,7 +240,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
         const offset = `-${opts.tile_size[1] * computedScale * (tile - 1)}px ${layer}px`
 
         if (imageSrc === undefined && isInView)
-            return <div style={{ width: width, height: height }}>{children}</div>;
+            return <div style={{ width: width, height: height }}>{fallback}</div>;
 
         const sprite_style: React.CSSProperties = {
             height,
@@ -217,7 +251,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
         } as React.CSSProperties
 
         if (stateConfig.type === "animated") {
-            const animationName = place_in_background ? "spriteBackgroundAnimation" : "spriteAnimation"
+            const animationName = children ? "spriteBackgroundAnimation" : "spriteAnimation"
             Object.assign(sprite_style, {
                 "--sprite-last-frame": `-${opts.tile_size[1] * computedScale * stateConfig.length}px`,
                 "--frames": stateConfig.length,
@@ -228,7 +262,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
         else
             Object.assign(
                 sprite_style,
-                place_in_background ?
+                children ?
                     {
                         backgroundPosition: offset
                     } :
@@ -240,7 +274,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
 
         Object.assign(style, sprite_style)
 
-        if (place_in_background) {
+        if (children) {
             return (
                 <div
                     {...props}
@@ -269,6 +303,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
     })
 
     return [Sprite, {
-        modifier
+        modifier,
+        load
     }]
 }
