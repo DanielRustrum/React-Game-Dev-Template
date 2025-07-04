@@ -91,6 +91,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
         const onLoad = () => {
             cleanup()
             resolve(true)
+            window.dispatchEvent(new CustomEvent("spriteLoaded"))
         }
 
         const onError = (_: unknown) => {
@@ -115,7 +116,6 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
 
         image.addEventListener('load', onLoad)
         image.addEventListener('error', onError)
-
     })
 
     const modifier = (id: string, callback: CallableFunction) => {
@@ -164,7 +164,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
         resizeTo,
         use_modifier = "",
         paused = false,
-        fallback = <></>,
+        fallback,
 
         style = {},
         animation,
@@ -215,6 +215,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
 
         //* Rerender Control
         const [_, setTick] = useState(0) //? Used to Force Rerenders of the Component
+
         useEffect(() => {
             if (paused) return;
 
@@ -231,6 +232,13 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
             return () => clearInterval(id)
         }, [use_modifier])
 
+        useEffect(() => {
+            const rerender = () => setTick((t) => t + 1)
+            window.addEventListener("spriteLoaded", rerender)
+
+            return () => window.removeEventListener("spriteLoaded", rerender)
+        }, [])
+
 
         const stateConfig = opts.structure[state]
         const computedScale = resizeTo ? resize_scale : scale
@@ -239,8 +247,10 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
         const layer = stateConfig.layer * computedScale * opts.tile_size[0]
         const offset = `-${opts.tile_size[1] * computedScale * (tile - 1)}px ${layer}px`
 
-        if (imageSrc === undefined && isInView)
-            return <div style={{ width: width, height: height }}>{fallback}</div>;
+        if (imageSrc === "" && isInView) {
+            if(fallback === undefined) return <></>;
+            return <div style={{ width: width, height: height }}>{fallback}</div>
+        }
 
         const sprite_style: React.CSSProperties = {
             height,
@@ -272,7 +282,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
             );
 
 
-        Object.assign(style, sprite_style)
+        const combinedStyle = { ...style, ...sprite_style }
 
         if (children) {
             return (
@@ -280,7 +290,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
                     {...props}
                     ref={imgRef as RefObject<HTMLDivElement>}
                     style={{
-                        ...style,
+                        ...combinedStyle,
                         backgroundImage: isInView ? `url(${imageSrc})` : undefined,
                         backgroundSize: `${opts.tile_size[1] * computedScale * (stateConfig.length ?? 1)}px auto`,
                     }}
@@ -296,7 +306,7 @@ export const spritesheet: SpritesheetFunction = (src, options = {}) => {
                     width={width}
                     height={height}
                     ref={imgRef as RefObject<HTMLImageElement>}
-                    style={style}
+                    style={combinedStyle}
                 />
             )
         }

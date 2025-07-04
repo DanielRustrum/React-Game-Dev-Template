@@ -1,5 +1,6 @@
 import { spritesheet } from "@engine/graphics.sprite"
 import { Slider } from "@ui/slider"
+import { Button } from "@ui/button"
 
 import test_sheet from '@assets/sprites/Pink_Monster_Idle_4.png'
 import { memo, useRef, useState } from "react"
@@ -15,6 +16,15 @@ const [Sprite, { modifier }] = spritesheet(test_sheet, {
     }
 })
 
+const [Sprite_Manual, { load }] = spritesheet(test_sheet, {
+    tile_size: [32, 32],
+    frame_time: .25,
+    loading: "delayed",
+    structure: {
+        "main": { type: "animated", layer: 0, length: 4 },
+        "tile": { type: "tile", layer: 0, length: 4 },
+    }
+})
 
 
 export const RateAnimated = memo(() => {
@@ -189,6 +199,14 @@ export const Panel = () => <div className="m-10">
     <ResizeAnimated />
     <ShaderExample />
     <AnimationExample />
+    <div className="flex gap-10 items-center">
+        <Sprite_Manual state="main" scale={4} fallback={<div className="w-full h-full flex justify-center items-center"><p>Spinner</p></div>} />
+        <Button onClick={() => load()}>Load Sprite</Button>
+    </div>
+    <div className="flex gap-10 items-center">
+        <Sprite_Manual state="main" scale={4} />
+        <Button onClick={() => load()}>Load Sprite</Button>
+    </div>
 </div>
 
 export const name = "sprite"
