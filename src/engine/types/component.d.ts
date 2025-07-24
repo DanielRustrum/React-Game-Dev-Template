@@ -1,16 +1,16 @@
-import { ComponentProps, FC, ReactNode } from "react"
+import { FC, ReactNode } from "react"
 
-type FunctionComponent<Props extends Object = {}, Base = {}, ExcludeProp extends string = ""> = FC<
+type FunctionComponent<Props extends Object = {}, Base = {}, ExcludeProp extends string = "", AdditionalAttributes extends HTMLElement = HTMLElement> = FC<
     keyof Props extends never?
-        Base & {children?: ReactNode} & ComponentProps<"div">:
+        Base & {children?: ReactNode} & HTMLAttributes<AdditionalAttributes>:
         Props extends Base?
-            Props & {children?: ReactNode} & ComponentProps<"div">: 
+            Props & {children?: ReactNode} & HTMLAttributes<AdditionalAttributes> : 
             ExcludeProp extends ""? 
                 Props & Base & {children?: ReactNode}:
                 Props & Omit<Base & {children?: ReactNode}, ExcludeProp> 
 >
 
-export type Component<Props extends Object = {}, Base extends Object | FunctionComponent = {}, ExcludeProp extends string = ""> = 
+export type Component<Props extends Object = {}, Base extends Object | FunctionComponent = {}, ExcludeProp extends string = "", AdditionalAttributes extends HTMLElement = HTMLElement> = 
     Base extends FunctionComponent<infer ComponentProp, infer ComponentBase, infer ComponentExclude> ? 
         FunctionComponent<
             keyof Props extends never? ComponentProp: Props, 
